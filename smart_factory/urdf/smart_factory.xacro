@@ -1,0 +1,162 @@
+<?xml version="1.0" ?>
+
+<robot name="prbt" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- macro definition of pilz lwa -->
+  <xacro:include filename="$(find prbt_support)/urdf/prbt_macro.xacro" />
+
+  <!-- coloring from the stl file -->
+  <material name="yellow">
+    <color rgba="1 1 0 1"/>
+  </material>
+
+  <!-- coloring from the table -->
+  <material name="grey">
+    <color rgba="0.75 0.75 0.75 1"/>
+  </material>
+
+  <!-- instantiate the robot -->
+  <xacro:prbt prefix="prbt_"/>
+
+  <link name="table">
+    <visual>
+      <origin rpy="1.57 0 0" xyz="-0.882 0.219 -0.82"/>
+      <geometry>
+        <mesh filename="package://smart_factory/urdf/meshes/robot_table.stl"
+            scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="grey"/>
+    </visual>
+
+    <visual>
+      <origin rpy="0 0 0" xyz="-0.295 -0.411 1.1"/>
+      <geometry>
+        <box size="1.174 0.02 0.02" />
+      </geometry>
+      <material name="grey"/>
+    </visual>
+
+    <visual>
+      <origin rpy="0 0 0" xyz="-0.295 0.219 1.1"/>
+      <geometry>
+        <box size="1.174 0.02 0.02" />
+      </geometry>
+      <material name="grey"/>
+    </visual>
+
+    <visual>
+      <origin rpy="0 0 0" xyz="-0.882 -0.096 1.1"/>
+      <geometry>
+        <box size="0.02 0.62 0.02" />
+      </geometry>
+      <material name="grey"/>
+    </visual>
+
+    <visual>
+      <origin rpy="0 0 0" xyz="0.3 -0.096 1.1"/>
+      <geometry>
+        <box size="0.02 0.62 0.02" />
+      </geometry>
+      <material name="grey"/>
+    </visual>
+
+    <visual>
+      <origin rpy="0 0 0" xyz="-0.882 0.22 0.55"/>
+      <geometry>
+        <box size="0.02 0.02 1.1" />
+      </geometry>
+      <material name="grey"/>
+    </visual>
+
+    <visual>
+      <origin rpy="0 0 0" xyz="-0.882 -0.41 0.55"/>
+      <geometry>
+        <box size="0.02 0.02 1.1" />
+      </geometry>
+      <material name="grey"/>
+    </visual>
+
+    <visual>
+      <origin rpy="0 0 0" xyz="0.3 0.22 0.55"/>
+      <geometry>
+        <box size="0.02 0.02 1.1" />
+      </geometry>
+      <material name="grey"/>
+    </visual>
+    
+    <visual>
+      <origin rpy="0 0 0" xyz="0.3 -0.41 0.55"/>
+      <geometry>
+        <box size="0.02 0.02 1.1" />
+      </geometry>
+      <material name="grey"/>
+    </visual>
+    
+
+    <!-- space limitation -->
+    <!-- table length: 1174mm, width: 630mm, height: 1100mm-->
+    <!-- <collision>
+      <origin rpy="0 0 0" xyz="-0.295 -0.411 0.55"/>
+      <geometry>
+        <box size="1.174 0.01 1.1" />
+      </geometry>
+    </collision> -->
+
+    <!-- <collision>
+      <origin rpy="0 0 0" xyz="-0.295 0.219 0.55"/>
+      <geometry>
+        <box size="1.174 0.01 1.1" />
+      </geometry>
+    </collision> -->
+
+    <collision>
+      <origin rpy="0 0 0" xyz="-0.882 -0.096 0.55"/>
+      <geometry>
+        <box size="0.01 0.62 1.1" />
+      </geometry>
+    </collision>
+
+    <collision>
+      <origin rpy="0 0 0" xyz="0.3 -0.096 0.55"/>
+      <geometry>
+        <box size="0.01 0.62 1.1" />
+      </geometry>
+    </collision>
+
+  </link>
+
+  <link name="gripper">
+    <visual>
+      <origin rpy="-1.57 0 0" xyz="-0.047 -0.11 0.17"/>
+      <geometry>
+        <mesh filename="package://smart_factory/urdf/meshes/gripper.stl"
+            scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="yellow"/>
+    </visual>
+  </link>
+
+  <link name="prbt_tcp"/>
+
+  <joint name="table_joint" type="fixed">
+    <origin rpy="0 0 3.14" xyz="0 0 0"/>
+    <parent link="table"/>
+    <child link="prbt_base_link"/>
+  </joint>
+
+  <!-- connect the gripper and the flange with a joint -->
+  <joint name="gripper_joint" type="fixed">
+    <origin rpy="0 0 0.785" xyz="0 0 0.05"/>
+    <parent link="prbt_flange"/>
+    <child link="gripper"/>
+  </joint>
+
+
+  <!-- connect the added tcp and the flange with a joint -->
+  <joint name="prbt_fixed_joint_tcp" type="fixed">
+    <origin rpy="0 0 0" xyz="-0.005 -0.005 0.21"/>
+    <parent link="prbt_flange"/>
+    <child link="prbt_tcp"/>
+  </joint>
+
+</robot>

@@ -1,0 +1,7 @@
+bool boxMissing
+bool penMissing
+bool smfPrbtPickingBox
+bool smfPrbtPickingPen
+bool smfPrbtPlacingBox
+bool smfPrbtPlacingPen
+bool smfPrbtAtHome

@@ -1,0 +1,13 @@
+<launch>
+    <include file="$(find pylon_camera)/launch/pylon_camera_node.launch">
+        <arg name="startup_user_set" value="1" />
+    </include>
+
+    <include file="$(find smart_factory)/launch/smf_prbt.launch"/>
+
+    <node ns="pylon_camera_node" name="image_rectifying" pkg="image_proc" type="image_proc" /> 
+    <node name="image_processing" pkg="smart_factory" type="image_processing_node.py" /> 
+    <node name="smf_tcp_server" pkg="smart_factory" type="smf_tcp_server.py" /> 
+    <node name="smart_factory_application_node" pkg="smart_factory" type="smart_factory_application.py" output="screen" /> 
+
+</launch>

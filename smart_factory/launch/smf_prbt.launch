@@ -1,0 +1,86 @@
+<?xml version="1.0"?>
+
+<!--
+Copyright © 2018 Pilz GmbH & Co. KG
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<launch>
+
+    <!-- The "sim" argument controls whether we connect to a Simulated or Real robot -->
+    <arg name="sim" default="false" />
+
+    <!-- For a customized gripper, do not set gripper value -->
+    <arg name="gripper" value="" />
+
+    <!-- Send urdf to parameter server -->
+    <param name="robot_description"
+           command="$(find xacro)/xacro '$(find smart_factory)/urdf/smart_factory.xacro'" />
+
+    <!-- Start RViz visualization. Comment this on headless hardware, if you just want to run the driver -->
+    <include file="$(find prbt_moveit_config)/launch/moveit_rviz.launch">
+        <!-- put in your config file, once you saved it inside your package -->
+        <arg name="rviz_config" value="$(find prbt_moveit_config)/launch/moveit.rviz" />
+    </include>
+
+    <!-- Bringup the planner including environment collision checking -->
+    <include file="$(find prbt_moveit_config)/launch/move_group.launch">
+        <arg name="fake_execution" value="$(arg sim)" /> <!-- do not change -->
+        <arg name="load_robot_description" value="false" />
+        <arg name="gripper" value="$(arg gripper)" />
+
+        <arg name="pipeline" value="pilz_industrial_motion_planner" /><!-- Choose planning pipeline -->
+    </include>
+
+    <!-- The semantic description that corresponds to the URDF. -->
+    <param name="robot_description_semantic" command="$(find xacro)/xacro 
+                $(find smart_factory)/config/prbt.srdf.xacro" />
+
+    <!-- Run the "real robot" interface nodes -->
+    <!--   - this includes: robot_state, canopen, and sto nodes -->
+    <group unless="$(arg sim)">
+        <include file="$(find prbt_support)/launch/robot.launch">
+            <arg name="load_robot_description" value="false" />
+            <arg name="gripper" value="$(arg gripper)" />
+
+            <!-- Safe-torque-off-input from the safety controller is read to brake the robot before power-off
+                 The signal is read via modbus and you can configure the modbus server ip -->
+            <arg name="safety_hw" value="pss4000" />
+            <arg name="modbus_server_ip" value="192.168.251.2" />
+            <arg name="iso10218_support" value="true" />
+            <arg name="has_braketest_support" value="false" />
+            <arg name="has_operation_mode_support" value="true" />
+            <arg name="visual_status_indicator" value="false" />
+        </include>
+    </group>
+
+    <!-- Run the robot simulator and action interface nodes -->
+    <group if="$(arg sim)">
+        <!-- Publish the robot state (tf transforms) -->
+        <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
+
+        <!-- We do not have a robot connected, so publish fake joint states -->
+        <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher">
+            <param name="/use_gui" value="false"/>
+            <rosparam param="/source_list">[/move_group/fake_controller_joint_states]</rosparam>
+        </node>
+
+        <!-- We assume that no safety controller is connected, so we need to fake the corresponding interface -->
+        <!--  - this includes: speed override -->
+        <include file="$(find prbt_hardware_support)/launch/fake_safety_interface.launch" />
+    </group>
+
+    <!-- startup application script with state-machine-based or similar procedural control -->
+
+</launch>

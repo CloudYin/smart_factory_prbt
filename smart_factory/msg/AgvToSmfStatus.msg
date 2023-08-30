@@ -1,0 +1,4 @@
+bool agvAtSmf
+bool agvPrbtChangingBox
+bool agvPrbtChangingPen
+bool agvPrbtAtHome
