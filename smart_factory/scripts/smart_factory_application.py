@@ -7,7 +7,6 @@ from geometry_msgs.msg import Pose, Point
 from pilz_robot_programming import Ptp, Lin, Robot, from_euler, Sequence
 from prbt_hardware_support.srv import WriteModbusRegister
 from prbt_hardware_support.msg import ModbusRegisterBlock, ModbusMsgInStamped
-from smart_factory.msg import AgvToSmfStatus, SmfToAgvStatus
 from smart_factory.srv import GetBoxPenCenter
 
 
@@ -77,12 +76,20 @@ def pss_modbus_write(start_idx, values):
 
 
 def pss_modbus_read_callback(msg):
+    global agv_at_smf
+    global agv_prbt_changing_box
+    global agv_prbt_changing_pen
+    global agv_prbt_at_home
     global box_request
     global pen_request
     global box_handout
     global pen_handout
 
     robot_run_permission = msg.holding_registers.data[4]
+    agv_at_smf = msg.holding_registers.data[10]
+    agv_prbt_changing_box = msg.holding_registers.data[11]
+    agv_prbt_changing_pen = msg.holding_registers.data[12]
+    agv_prbt_at_home = msg.holding_registers.data[13]
     box_request = msg.holding_registers.data[21]
     pen_request = msg.holding_registers.data[22]
     box_handout = msg.holding_registers.data[23]
@@ -99,18 +106,6 @@ def pss_modbus_read_callback(msg):
         rospy.sleep(1)
         r.resume()
         pss_modbus_write(pss_modbus_write_dic["robot_stopped"], [0])
-
-
-def callback_AgvToSmfStatus(msg):
-    global agv_at_smf
-    global agv_prbt_changing_box
-    global agv_prbt_changing_pen
-    global agv_prbt_at_home
-
-    agv_at_smf = msg.agvAtSmf
-    agv_prbt_changing_box = msg.agvPrbtChangingBox
-    agv_prbt_changing_pen = msg.agvPrbtChangingPen
-    agv_prbt_at_home = msg.agvPrbtAtHome
 
 
 def get_box_pen_center():
@@ -130,21 +125,13 @@ def get_box_pen_center():
     if len(pen_centers_y) == 0:
         rospy.loginfo("pen missing!")
         pss_modbus_write(pss_modbus_write_dic["pen_missing"], [1])
-        smfToAgvMsg.penMissing = True
-        smf_to_agv_publisher.publish(smfToAgvMsg)
     else:
         pss_modbus_write(pss_modbus_write_dic["pen_missing"], [0])
-        smfToAgvMsg.penMissing = False
-        smf_to_agv_publisher.publish(smfToAgvMsg)
     if len(box_centers_y) == 0:
         rospy.loginfo("box missing!")
         pss_modbus_write(pss_modbus_write_dic["box_missing"], [1])
-        smfToAgvMsg.boxMissing = True
-        smf_to_agv_publisher.publish(smfToAgvMsg)
     else:
         pss_modbus_write(pss_modbus_write_dic["box_missing"], [0])
-        smfToAgvMsg.boxMissing = False
-        smf_to_agv_publisher.publish(smfToAgvMsg)
 
 
 def init_modbus_value():
@@ -179,20 +166,12 @@ if __name__ == "__main__":
 
     r = Robot("1")  # 创建化机器人实例
 
-    smf_to_agv_publisher = rospy.Publisher(
-        "smf_to_agv_status", SmfToAgvStatus, queue_size=10
-    )
-
     rospy.Subscriber(
         "/pilz_modbus_client_node/modbus_read",
         ModbusMsgInStamped,
         pss_modbus_read_callback,
         queue_size=1,
     )
-
-    rospy.Subscriber("agv_to_smf_status", AgvToSmfStatus, callback_AgvToSmfStatus)
-
-    smfToAgvMsg = SmfToAgvStatus()
 
     init_modbus_value()
 
@@ -230,8 +209,6 @@ if __name__ == "__main__":
         )
     r.move(Ptp(goal=START_POSE, vel_scale=LIN_SCALE, acc_scale=0.1))
     pss_modbus_write(pss_modbus_write_dic["robot_at_home"], [1])
-    smfToAgvMsg.smfPrbtAtHome = True
-    smf_to_agv_publisher.publish(smfToAgvMsg)
 
     while not rospy.is_shutdown():
         if not (agv_prbt_changing_box or agv_prbt_changing_pen):
@@ -250,10 +227,6 @@ if __name__ == "__main__":
             pss_modbus_write(pss_modbus_write_dic["sucker_on"], [0])
             pss_modbus_write(pss_modbus_write_dic["robot_stopped"], [0])
             pss_modbus_write(pss_modbus_write_dic["robot_at_home"], [0])
-
-            smfToAgvMsg.smfPrbtPickingBox = True
-            smfToAgvMsg.smfPrbtAtHome = False
-            smf_to_agv_publisher.publish(smfToAgvMsg)
 
             box_stock_pick_up_pose = Pose(
                 position=Point(STOCK_BOX_X, box_centers_y[0], STOCK_Z_UP),
@@ -337,15 +310,8 @@ if __name__ == "__main__":
                 pss_modbus_write(pss_modbus_write_dic["robot_at_home"], [1])
                 pss_modbus_write(pss_modbus_write_dic["robot_stopped"], [1])
 
-                smfToAgvMsg.smfPrbtPickingBox = False
-                smfToAgvMsg.smfPrbtAtHome = True
-                smf_to_agv_publisher.publish(smfToAgvMsg)
-
         else:
             pss_modbus_write(pss_modbus_write_dic["box_request_finished"], [0])
-
-            smfToAgvMsg.smfPrbtPickingBox = False
-            smf_to_agv_publisher.publish(smfToAgvMsg)
 
         # 笔取料工序
         if (
@@ -361,10 +327,6 @@ if __name__ == "__main__":
             pss_modbus_write(pss_modbus_write_dic["gripper_close"], [0])
             pss_modbus_write(pss_modbus_write_dic["robot_stopped"], [0])
             pss_modbus_write(pss_modbus_write_dic["robot_at_home"], [0])
-
-            smfToAgvMsg.smfPrbtPickingPen = True
-            smfToAgvMsg.smfPrbtAtHome = False
-            smf_to_agv_publisher.publish(smfToAgvMsg)
 
             pen_stock_pick_up_pose = Pose(
                 position=Point(STOCK_PEN_X, pen_centers_y[0], STOCK_Z_UP),
@@ -449,15 +411,8 @@ if __name__ == "__main__":
             pss_modbus_write(pss_modbus_write_dic["robot_at_home"], [1])
             pss_modbus_write(pss_modbus_write_dic["robot_stopped"], [1])
 
-            smfToAgvMsg.smfPrbtPickingPen = False
-            smfToAgvMsg.smfPrbtAtHome = True
-            smf_to_agv_publisher.publish(smfToAgvMsg)
-
         else:
             pss_modbus_write(pss_modbus_write_dic["pen_request_finished"], [0])
-
-            smfToAgvMsg.smfPrbtPickingPen = False
-            smf_to_agv_publisher.publish(smfToAgvMsg)
 
         # 名片盒出料工序
         if box_handout and not (agv_prbt_changing_box or agv_prbt_changing_pen):
@@ -468,10 +423,6 @@ if __name__ == "__main__":
             pss_modbus_write(pss_modbus_write_dic["sucker_on"], [0])
             pss_modbus_write(pss_modbus_write_dic["robot_stopped"], [0])
             pss_modbus_write(pss_modbus_write_dic["robot_at_home"], [0])
-
-            smfToAgvMsg.smfPrbtPlacingBox = True
-            smfToAgvMsg.smfPrbtAtHome = False
-            smf_to_agv_publisher.publish(smfToAgvMsg)
 
             box_conveyor_pick_up_pose = Pose(
                 position=Point(-0.011, 0.33, STOCK_Z_UP),
@@ -565,15 +516,8 @@ if __name__ == "__main__":
             pss_modbus_write(pss_modbus_write_dic["robot_at_home"], [1])
             pss_modbus_write(pss_modbus_write_dic["robot_stopped"], [1])
 
-            smfToAgvMsg.smfPrbtPlacingBox = False
-            smfToAgvMsg.smfPrbtAtHome = True
-            smf_to_agv_publisher.publish(smfToAgvMsg)
-
         else:
             pss_modbus_write(pss_modbus_write_dic["box_handout_finished"], [0])
-
-            smfToAgvMsg.smfPrbtPlacingBox = False
-            smf_to_agv_publisher.publish(smfToAgvMsg)
 
         # 笔出料工序
         if pen_handout and not (agv_prbt_changing_box or agv_prbt_changing_pen):
@@ -585,10 +529,6 @@ if __name__ == "__main__":
             pss_modbus_write(pss_modbus_write_dic["gripper_close"], [0])
             pss_modbus_write(pss_modbus_write_dic["robot_stopped"], [0])
             pss_modbus_write(pss_modbus_write_dic["robot_at_home"], [0])
-
-            smfToAgvMsg.smfPrbtPlacingPen = True
-            smfToAgvMsg.smfPrbtAtHome = False
-            smf_to_agv_publisher.publish(smfToAgvMsg)
 
             pen_conveyor_pick_up_pose = Pose(
                 position=Point(-0.005, 0.329, STOCK_Z_UP),
@@ -683,14 +623,8 @@ if __name__ == "__main__":
             pss_modbus_write(pss_modbus_write_dic["robot_at_home"], [1])
             pss_modbus_write(pss_modbus_write_dic["robot_stopped"], [1])
 
-            smfToAgvMsg.smfPrbtPlacingPen = False
-            smfToAgvMsg.smfPrbtAtHome = True
-            smf_to_agv_publisher.publish(smfToAgvMsg)
         else:
             pss_modbus_write(pss_modbus_write_dic["pen_handout_finished"], [0])
-
-            smfToAgvMsg.smfPrbtPlacingBox = False
-            smf_to_agv_publisher.publish(smfToAgvMsg)
 
         rospy.sleep(1)
 

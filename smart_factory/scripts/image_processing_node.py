@@ -133,7 +133,7 @@ class ImageProcessing:
                 img_contour = cv2.drawContours(
                     pen_plate_roi, currentContour, -1, (0, 0, 0)
                 )
-                if 16000 < cv2.moments(currentContour)["m00"] < 18000:
+                if 15500 < cv2.moments(currentContour)["m00"] < 18000:
                     m00 = cv2.moments(currentContour)["m00"]
                     m01 = cv2.moments(currentContour)["m01"]
                     m10 = cv2.moments(currentContour)["m10"]
