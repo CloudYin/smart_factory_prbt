@@ -159,7 +159,6 @@ def init_modbus_value():
 
 
 if __name__ == "__main__":
-
     # 创建节点
     rospy.init_node("robot_program_node")
     rospy.loginfo("Smart factory ros program started")
@@ -215,11 +214,10 @@ if __name__ == "__main__":
             get_box_pen_center()
 
         # 名片盒取料工序
-        if (
-            box_request
-            and (len(box_centers_y) != 0)
-            and not (agv_prbt_changing_box or agv_prbt_changing_pen)
-        ):
+        if box_request and (len(box_centers_y) != 0):
+            while agv_at_smf and not agv_prbt_at_home:
+                r.pause
+            r.resume()
             pss_modbus_write(pss_modbus_write_dic["box_request_in_process"], [1])
             pss_modbus_write(pss_modbus_write_dic["box_request_finished"], [0])
             pss_modbus_write(pss_modbus_write_dic["use_gripper"], [0])
@@ -314,11 +312,10 @@ if __name__ == "__main__":
             pss_modbus_write(pss_modbus_write_dic["box_request_finished"], [0])
 
         # 笔取料工序
-        if (
-            pen_request
-            and (len(pen_centers_y) != 0)
-            and not (agv_prbt_changing_box or agv_prbt_changing_pen)
-        ):
+        if pen_request and (len(pen_centers_y) != 0):
+            while agv_at_smf and not agv_prbt_at_home:
+                r.pause
+            r.resume()
             pss_modbus_write(pss_modbus_write_dic["pen_request_in_process"], [1])
             pss_modbus_write(pss_modbus_write_dic["pen_request_finished"], [0])
             pss_modbus_write(pss_modbus_write_dic["use_gripper"], [1])
@@ -415,7 +412,10 @@ if __name__ == "__main__":
             pss_modbus_write(pss_modbus_write_dic["pen_request_finished"], [0])
 
         # 名片盒出料工序
-        if box_handout and not (agv_prbt_changing_box or agv_prbt_changing_pen):
+        if box_handout:
+            while agv_at_smf and not agv_prbt_at_home:
+                r.pause
+            r.resume()
             pss_modbus_write(pss_modbus_write_dic["box_handout_in_process"], [1])
             pss_modbus_write(pss_modbus_write_dic["box_handout_finished"], [0])
             pss_modbus_write(pss_modbus_write_dic["use_gripper"], [0])
@@ -520,7 +520,10 @@ if __name__ == "__main__":
             pss_modbus_write(pss_modbus_write_dic["box_handout_finished"], [0])
 
         # 笔出料工序
-        if pen_handout and not (agv_prbt_changing_box or agv_prbt_changing_pen):
+        if pen_handout:
+            while agv_at_smf and not agv_prbt_at_home:
+                r.pause
+            r.resume()
             pss_modbus_write(pss_modbus_write_dic["pen_handout_in_process"], [1])
             pss_modbus_write(pss_modbus_write_dic["pen_handout_finished"], [0])
             pss_modbus_write(pss_modbus_write_dic["use_gripper"], [1])
